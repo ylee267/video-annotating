@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html>
+    <head>
+
+        <meta charset="UTF-8">
+        {% load staticfiles %}
+        <link rel="stylesheet" href="{% static "semantic/css/semantic.css" %}">
+        <link rel="stylesheet" href="{% static "annotate_style.css" %}">
+    </head>
+    <body>
+        <script>
+        </script>
+        <div id="nickname">{{ nickname }}</div>
+        <div id="email">{{ email }}</div>
+        <div class="ui grid">
+            <div class="row">
+                <div class="sixteen wide column">
+                    <p id="old-notification">
+                        <span class="old-user"></span>
+                        <span class="old-comment">Previous Comment</span>
+                    </p>
+                    <p id="new-notification">
+                        <span class="new-user"></span>
+                        <span class="new-comment">Current Comment</span>
+                    </p>
+                </div>
+
+                <div class="ten wide column">
+                    <div class="ui segment">
+                        <div class="row">
+                            <div class="sixteen wide column">
+                                <div class="video-container">
+                                    <div id="player"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class=row">
+                            <div class="timeline-container">
+                                <div class="bar-container">
+                                    <div class="bar"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="six wide column">
+                    <div class="ui segment">
+                        <div class="row">
+                            <div class="table-wrapper">
+                                <table id="annotation-table" class="ui basic table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Time</th>
+                                            <th>Type</th>
+                                            <th>Comments</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- django built-in tag value sort -->
+                                        {% for entry in all|dictsort:"time" %}
+                                            <tr class="annotation">
+                                                <td class="nickname">{{ entry.nickname }}</td>
+                                                <td class="time">
+                                                    <span class="time">{{ entry.time|floatformat:"0" }}</span>
+                                                    <span class="show-time"></span>
+                                                </td>
+                                                <td class="comment_type">
+                                                    <span class="hidden">{{ entry.comment_type }}</span>
+                                                    {% if entry.comment_type == "chat" %}
+                                                    <a class="ui red label">chat</a>
+                                                    {% elif entry.comment_type == "question" %}
+
+                                                    <a class="ui green label">q.</a>
+
+                                                    {% elif entry.comment_type == "discussion" %}
+                                                            
+                                                    <a class="ui pink label">di.</a>
+
+                                                    {% endif %}
+                                                </td>
+                                                <td class="comment">{{ entry.comment }}</script></td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="sixteen wide column">
+                                <div id="annotation-btn-panel">
+                                    <div id="annotation-btn" class="ui submit orange button">
+                                        <i class="add icon"></i>
+                                        Create A Comment
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="sixteen wide column">
+
+                                <div id="annotation-panel" class="annotation-panel">
+                                    <form action="." method="post">{% csrf_token %}
+                                        <div class="ui form segment">
+                                            <div class="two fields">
+                                                <div class="field">
+                                                    <label>Time</label>
+                                                    <div class="current-video-time-container"><span id="current-video-time"></span> secs</div>
+                                                </div>
+                                                <div class="field">
+                                                    <label>Type</label>
+                                                    <div class="comment-type-container">
+                                                        <input type="radio" name="comment_type" value="chat" checked="checked"> Chat
+                                                        <input type="radio" name="comment_type" value="question"> Question
+                                                        <input type="radio" name="comment_type" value="discussion"> Discussion
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="two fields">
+                                                <div class="field">
+                                                    <label>Comment</label>
+                                                    <input type="text" id="comment" name="comment">
+                                                </div>
+                                                <div class="field">
+                                                    <label>submit or cancel</label>
+                                                    <div class="ui icon buttons">
+                                                        <div id="post-annotation-btn" class="ui blue button"><i class="add icon"></i></div>
+                                                        <div id="cancel-annotation-btn" class="ui red button"><i class="remove icon"></i></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.0/jquery.cookie.js"></script>
+        <script src="{% static "semantic/javascript/semantic.js" %}"></script>
+        <script src="{% static "timeline.js" %}"></script>
+        <script>
+            var csrftoken = $.cookie('csrftoken');
+
+            function csrfSafeMethod(method) {
+                // these HTTP methods do not require CSRF protection
+                return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+            }
+
+            function urlify(text) {
+                var urlRegex = /(https?:\/\/[^\s]+)/g;
+                return text.replace(urlRegex, function(url) {
+                    return '<a href="' + url + '">' + url + '</a>';
+                })
+            }
+
+
+
+            $.ajaxSetup({
+                crossDomain: false, // obviates need for sameOrigin test
+                beforeSend: function(xhr, settings) {
+                    if (!csrfSafeMethod(settings.type)) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    }
+                }
+            });
+
+            var videoID = '47em2MChOIM';
+
+            function onYouTubeIframeAPIReady() {
+                player = new YT.Player('player', {
+                    height: '300',
+                    width: '400',
+                    videoId: videoID,
+                    events: {
+                        'onReady': onPlayerReady,
+                        'onStateChange': onplayerStateChange
+                    }
+                });
+                // player.addEventListener("onStateChange", "onplayerStateChange");
+            }
+
+
+
+            // 2. This code loads the IFrame Player API code asynchronously.
+            var tag = document.createElement('script');
+
+            tag.src = "https://www.youtube.com/iframe_api";
+            var firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+            // 3. This function creates an <iframe> (and YouTube player)
+            //    after the API code downloads.
+            var player;
+
+            function pauseVideo() {
+                player.pauseVideo();
+            }
+
+            function playVideo() {
+                player.playVideo();
+            }
+
+            function prepareAnnotation() {
+                pauseVideo();
+                currentTime = player.getCurrentTime();
+
+                $('#current-video-time').html(currentTime.toFixed(0));
+            }
+
+            function highlightCurrentRow(currentRow) {
+                if ($(currentRow).hasClass('new-insert')) {
+                
+                    $(currentRow).removeClass('new-insert');
+                    $(currentRow).addClass('new-insert');
+                    $(currentRow).addClass('highlight');
+                } else {
+                    $(currentRow).addClass('highlight');
+                }
+            }
+
+            function insertNewRow(newRow, currentTime) {
+                // linear search the table's value
+                // get the table row with most close value
+                // and append new row in front of it
+                var difference = 1000000;
+                var selectedRowVal = 0;
+                var processingRowVal = 0;
+                var selectedRow = '';
+                $('#annotation-table tr.annotation').each(function() {
+                    processingRowVal = $(this).find('span.time').html();
+                    if (Math.abs(currentTime - processingRowVal) < difference) {
+                        difference = Math.abs(currentTime - processingRowVal);
+                        selectedRowVal = processingRowVal;
+                        selectedRow = $(this);
+                    }
+                });
+
+                // decide to append the new row in front of or after
+                // the selected Row
+                if ((currentTime - selectedRowVal) <= 0) {
+                    $( newRow ).insertBefore( selectedRow );
+                } else {
+                    $( newRow ).insertAfter( selectedRow );
+                }
+
+            }
+
+            function writeAnnotation() {
+
+                var nicknameCell = '<td class="nickname">' + $('#nickname').html() + '</td>';
+
+                var timeCell = '<td class="time">' 
+                    + '<span class="time">' + $('#current-video-time').html() + '</span>'
+                    + '<span class="show-time">' + changeToMins($('#current-video-time').html()) + '</span>'
+                    + '</td>';
+
+                
+                var commentTypeCell = '';
+            
+                var commentType = $('input[name=comment_type]:radio:checked').val();
+                if ( commentType == 'chat' ) {
+
+                    commentTypeCell = '<td class="comment-type"><a class="ui red label">chat</a></td>';
+
+                } else if ( commentType == 'discussion') {
+                    
+                     commentTypeCell = '<td class="comment-type"><a class="ui pink label">di.</a></td>';
+
+                } else if ( commentType == 'question') {
+                
+                    commentTypeCell = '<td class="comment-type"><a class="ui green label">q.</a></td>';
+                }
+
+
+                var commentCell = '<td class="comment">' + urlify($('#comment').val()) + '</td>';
+
+                // new row will be annotate as warning class
+                var newRow = '<tr class="annotation new-insert">' + nicknameCell + timeCell + commentTypeCell + commentCell + '</tr>';
+
+                // insert new row into specific position
+                var currentVideoTime = $('#current-video-time').html()
+                insertNewRow(newRow, currentVideoTime);
+
+                $('span.time').css("display", "none");
+
+                // clean timecell and commentcell
+                $('#current-video-time').html('');
+                $('#comment').val('');
+
+            }
+
+            function postAnnotation( data ) {
+                var pathname = window.location.pathname;
+                $.ajax({
+                    type: "POST",
+                    url: pathname,
+                    data: data,
+                    success: function(response) {
+                        console.log("success!");
+
+
+                    },
+                });
+            }
+
+            function annotationBtnHandler() {
+
+                // main action
+                prepareAnnotation();
+
+                // annotation panel action
+                $('#annotation-panel').show();
+
+                // self action
+                $('#annotation-btn').unbind('click', annotationBtnHandler);
+                $('#annotation-btn').addClass('disabled');
+                $('#annotation-btn-panel').hide();
+
+
+            }
+
+            function postAnnotationBtnHandler() {
+                // main action
+                var data = {'nickname': $('#nickname').html(),
+                            'email': $('#email').html(),
+                            'video': videoID,
+                            'time': player.getCurrentTime(),
+                            'comment': $('#comment').val(),
+                            'comment_type': $('input[name=comment_type]:radio:checked').val()}
+
+                var time = player.getCurrentTime();
+                var comment_type = $('input[name=comment_type]:radio:checked').val();
+
+                writeAnnotation();
+
+                postAnnotation( data );
+
+                // annotation panel action
+                $('#annotation-panel').hide();
+
+                // annotation btn action
+                $('#annotation-btn').bind( 'click', annotationBtnHandler );
+                $('#annotation-btn').removeClass('disabled');
+                $('#annotation-btn-panel').show();
+
+                // add the current timestamp to timeline
+                if (comment_type == 'question') {
+                    addTimestamp(comment_type, time);
+                }
+
+            }
+
+            function cancelAnnotationBtnHandler() {
+
+                // annotation panel action
+                $('#annotation-panel').hide();
+
+                // annotation btn action
+                $('#annotation-btn').bind( 'click', annotationBtnHandler );
+                $('#annotation-btn').removeClass('disabled');
+                $('#annotation-btn-panel').show();
+
+
+            }
+
+            function changeToMins(time) {
+                var mins = Math.floor(time / 60);
+                var secs = (time - mins*60).toFixed(0);
+
+                if (mins > 0) {
+                    time = mins + '\' ' + secs + '\'\'';
+                } else {
+                    time = secs + '\'\''; 
+                }
+
+                return time;
+            }
+
+            // youtube event handler
+            function onplayerStateChange(newState) {
+                state = newState.data
+                if (state == 1) {
+                    $('#annotation-btn').removeClass('disabled');
+                    $('#annotation-btn').bind( 'click', annotationBtnHandler );
+                   
+                }
+            }
+
+            // youtube event handler
+            function onPlayerReady(event) {
+                var currentRow = '';
+                var currentTime = player.getCurrentTime();
+                var processingRowTime = 0;
+                
+                var table = $('.table-wrapper');
+                var highlightRow = 0;
+                var oldScrollRow = 0;
+
+                var firstScroll = 0;
+                var count = 0;
+                var offset = 0;
+
+                // select if the row is in 1 sec different with current time
+                var range = 5;
+                var oldRow = 0;
+                var prevRow = 0;
+
+                setInterval(function() {
+
+                    currentTime = player.getCurrentTime();
+                    highlightRow = 0;
+                    threshold = 100000;
+
+                    $('#annotation-table tr.annotation').each(function() {
+
+                        processingRowTime = $(this).find('span.time').html();
+                        currentRow = $(this);
+                        // console.log(Math.abs(currentTime - processingRowTime));
+                        if (Math.abs(currentTime - processingRowTime) < range) {
+                            highlightCurrentRow(currentRow);
+                            if (currentRow.hasClass('new-insert')) {
+                                currentRow.removeClass('new-insert');
+                                currentRow.addClass('new-insert');
+                                currentRow.addClass('highlight');
+                            } else {
+                                $(currentRow).addClass('highlight');
+                            }
+
+                            if (Math.abs(currentTime - processingRowTime) < threshold) {
+                                highlightRow = currentRow;
+                                threshold = Math.abs(currentTime - processingRowTime);
+                            }
+
+                        } else {
+                            $(this).removeClass('highlight');
+                        }
+
+                    });
+
+                    if (prevRow === 0) {
+                        prevRow = highlightRow;
+                    } else if (prevRow.find('td.comment').html() !== highlightRow.find('td.comment').html()) {
+                        console.log(prevRow);
+                        console.log(highlightRow);
+                        oldRow = prevRow;
+                        prevRow = highlightRow;
+                       
+                    }
+
+                    if (oldRow === 0) {
+                        oldRow = highlightRow;
+                    }
+
+
+                    if ((highlightRow !== 0) && highlightRow.hasClass('highlight')) {
+
+
+                        // offset = highlightRow.offset().top - (table.height()/2);
+                        // table.scrollTop( offset );
+                        // update old notification
+                        $('.old-user').html( oldRow.find('td.nickname').html() + ":" );
+                        $('.old-comment').html( oldRow.find('td.comment').html() );
+
+                        
+                        // update new notification
+                        $('.new-user').html( highlightRow.find('td.nickname').html() + ":")
+                        $('.new-comment').html( highlightRow.find('td.comment').html())
+
+                        //offset = highlightRow.offset().top - (table.height()/2);
+                        /*
+                        if (oldScrollRow === 0){
+
+                            table.scrollTop( offset );
+
+                            oldScrollRow = highlightRow;
+
+                        } else if (oldScrollRow.find('span.time').html() != highlightRow.find('span.time').html()) {
+
+                            table.scrollTop( offset );
+                            oldScrollRow = highlightRow;
+                        }
+                        */
+
+                    }
+
+
+                }, 2000); 
+            }
+
+            
+            $(document).ready(function() {
+                // Initial Setup
+                $('.ui.dropdown').dropdown();
+                $('.comment').each(function( index ) {
+                    $(this).html( urlify($(this).html() ) );
+                });
+                $("#user").css("display", "none");
+                $("#nickname").css("display", "none");
+                $("#email").css("display", "none");
+                $("#phone").css("display", "none");
+                $('span.time').css("display", "none");
+                $('#annotation-panel').hide();
+                $('#annotation-btn').addClass('disabled');
+                $('#annotation-btn').unbind( 'click', annotationBtnHandler );
+
+                repaintTimelineInitial();
+                
+                $('#post-annotation-btn').bind('click', postAnnotationBtnHandler);
+                $('#cancel-annotation-btn').bind('click', cancelAnnotationBtnHandler );
+
+                var showTime = '';
+                $('tr.annotation').each(function() {
+                    showTime = changeToMins($(this).find('span.time').html());
+                    $(this).find('span.show-time').html(showTime);
+                });
+                $(document).keypress(function(e) {
+
+                    if(e.which == 13) {
+                        event.preventDefault();
+                        postAnnotationBtnHandler();
+                    }
+                });
+
+            });
+        </script>
+    </body>
+</html>

@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        {% load staticfiles %}
+        <link rel="stylesheet" href="{% static "semantic/css/semantic.css" %}">
+    </head>
+    <body>
+        <div class="ui page grid">
+            <div class="row">
+                <div class="column">
+                    <div class="ui basic segment">
+                        <h2 class="ui center aligned header">
+                            Video Annotation
+                        </h2>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="column">
+                    <div class="ui warning form segment">
+                        <form id="user-form" action="." method="post">{% csrf_token %}
+                            <div class="field">
+                                <label>Nickname</label>
+                                <div class="ui left labeled icon input">
+                                    <input placeholder="Your nickname" name="nickname" type="text">
+                                    <i class="user icon"></i>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label>Email</label>
+                                <div class="ui left labeled icon input">
+                                    <input placeholder="Your E-mail" type="text" name="email">
+                                    <i class="mail icon"></i>
+                                </div>
+                            </div>
+                            {% if form.errors %}
+                                <div class="ui warning message">
+                                    <div class="header">Check the input data</div>
+                                    <ul class="list">
+                                        {% if form.nickname.errors %}
+                                        <li>Please input your <b>nickname</b></li>
+                                        {% endif %}
+                                        {% if form.email.errors %}
+                                        <li>Wrong E-mail format</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            {% endif %}
+                            {% if wrong_email %}
+                                <div class="ui warning message">
+                                    <div class="header">Invalid Email</div>
+                                </div>
+                            {% endif %}
+                            <div class="ui blue submit button" id="user-submit">Start to comment</div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="column">
+                    <div id="description-panel" class="ui message">
+                        <div class="header">
+                            Instruction
+                        </div>
+                        <ul class="list">
+                            <li>Press the play button and start to comment</li>
+                            <li>Press the create comment button to create a comment while video is playing</li>
+                            <li>After creating a comment, press the create button to play the video</li>
+                            <li>If you don't want to create a comment, press the cancel button to play the video</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.0/jquery.cookie.js"></script>
+
+        <script src="{% static "semantic/javascript/semantic.js" %}"></script>
+        <script>
+            var csrftoken = $.cookie('csrftoken');
+
+            function csrfSafeMethod(method) {
+                // these HTTP methods do not require CSRF protection
+                return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+            }
+
+            $.ajaxSetup({
+                crossDomain: false, // obviates need for sameOrigin test
+                beforeSend: function(xhr, settings) {
+                    if (!csrfSafeMethod(settings.type)) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    }
+                }
+            });
+
+            function userSubmit( data ) {
+                var pathname = window.location.pathname;
+                $.ajax({
+                    type: "POST",
+                    url: pathname,
+                    data: data,
+                    success: function(response) {
+                        console.log("success!");
+                    }
+                });
+            }
+
+            $(document).ready(function() {
+                $('#user-submit').click(function() {
+                    $('#user-form').submit();
+                    console.log('submit');
+                });
+            });
+        </script>
+
+    </body>
+</html>
+
